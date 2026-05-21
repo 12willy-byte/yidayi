@@ -1,19 +1,19 @@
-import Database, { Database as DatabaseType } from "better-sqlite3";
-import path from "path";
-import { fileURLToPath } from "url";
+import { createClient, type Client } from "@libsql/client";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// 生产环境使用持久化卷挂载路径，开发环境使用 server 目录
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "..");
-const DB_PATH = path.join(DATA_DIR, "yidayi.db");
+const TURSO_URL = process.env.TURSO_DATABASE_URL;
+const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN;
 
-export const db: DatabaseType = new Database(DB_PATH);
+if (!TURSO_URL || !TURSO_TOKEN) {
+  throw new Error("TURSO_DATABASE_URL and TURSO_AUTH_TOKEN are required. Set them in .env");
+}
 
-db.pragma("journal_mode = WAL");
-db.pragma("foreign_keys = ON");
+export const db: Client = createClient({
+  url: TURSO_URL,
+  authToken: TURSO_TOKEN,
+});
 
-export function initDB() {
-  db.exec(`
+export async function initDB() {
+  await db.executeMultiple(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       email TEXT UNIQUE NOT NULL,
@@ -98,6 +98,17 @@ export function initDB() {
       date TEXT NOT NULL DEFAULT (date('now')),
       created_at TEXT DEFAULT (datetime('now')),
       UNIQUE(user_id, date)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_clothing_user ON clothing_items(user_id);
+    CREATE INDEX IF NOT EXISTS idx_outfits_user ON outfits(user_id);
+    CREATE INDEX IF NOT EXISTS idx_outfit_items_outfit ON outfit_items(outfit_id);
+    CREATE TABLE IF NOT EXISTS files (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      filename TEXT NOT NULL,
+      data TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
     );
 
     CREATE INDEX IF NOT EXISTS idx_clothing_user ON clothing_items(user_id);
