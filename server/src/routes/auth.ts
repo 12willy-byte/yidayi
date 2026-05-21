@@ -1,7 +1,7 @@
 import { Router, Response } from "express";
 import { registerByEmail, loginByEmail, loginByWeChat } from "../auth.js";
 import { AuthRequest, requireAuth } from "../middleware/auth.js";
-import { db } from "../db.js";
+import { query } from "../db.js";
 
 const router = Router();
 
@@ -78,14 +78,14 @@ router.post("/wechat", async (req: AuthRequest, res: Response) => {
 });
 
 router.get("/me", requireAuth, async (req: AuthRequest, res: Response) => {
-  const u = await db.execute({
-    sql: "SELECT id, email, username, avatar_url, wechat_openid, wechat_nickname, wechat_avatar_url FROM users WHERE id = ?",
-    args: [req.userId!],
-  });
+  const u = await query(
+    "SELECT id, email, username, avatar_url, wechat_openid, wechat_nickname, wechat_avatar_url FROM users WHERE id = ?",
+    [req.userId!],
+  );
   const user = u.rows[0] as any;
   if (!user) { res.status(404).json({ error: "用户不存在" }); return; }
 
-  const p = await db.execute({ sql: "SELECT * FROM profiles WHERE id = ?", args: [req.userId!] });
+  const p = await query("SELECT * FROM profiles WHERE id = ?", [req.userId!]);
   const profile = p.rows[0] as any;
 
   res.json({

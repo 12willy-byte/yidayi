@@ -12,6 +12,11 @@ export const db: Client = createClient({
   authToken: TURSO_TOKEN,
 });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function query(sql: string, args?: any[]) {
+  return db.execute({ sql, args: args as any });
+}
+
 export async function initDB() {
   await db.executeMultiple(`
     CREATE TABLE IF NOT EXISTS users (

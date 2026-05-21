@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { AuthRequest, requireAuth } from '../middleware/auth.js';
-import { db } from '../db.js';
+import { query } from '../db.js';
 import { suggestOutfit } from '../services/bailian.service.js';
 
 const router = Router();
@@ -12,16 +12,16 @@ router.post('/suggest-outfit', requireAuth, async (req: AuthRequest, res: Respon
     let wardrobeItems: any[];
     if (itemIds && Array.isArray(itemIds) && itemIds.length > 0) {
       const placeholders = itemIds.map(() => '?').join(',');
-      const result = await db.execute({
-        sql: `SELECT name, category, colors FROM clothing_items WHERE id IN (${placeholders}) AND user_id = ?`,
-        args: [...itemIds, req.userId!],
-      });
+      const result = await query(
+        `SELECT name, category, colors FROM clothing_items WHERE id IN (${placeholders}) AND user_id = ?`,
+        [...itemIds, req.userId!],
+      );
       wardrobeItems = result.rows as any[];
     } else {
-      const result = await db.execute({
-        sql: 'SELECT name, category, colors FROM clothing_items WHERE user_id = ? ORDER BY created_at DESC LIMIT 30',
-        args: [req.userId!],
-      });
+      const result = await query(
+        'SELECT name, category, colors FROM clothing_items WHERE user_id = ? ORDER BY created_at DESC LIMIT 30',
+        [req.userId!],
+      );
       wardrobeItems = result.rows as any[];
     }
 
