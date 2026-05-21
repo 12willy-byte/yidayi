@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "衣搭衣",
+    "slug": "yidayi",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "scheme": "yidayi",
+    "extra": {
+      "supabaseUrl": "${EXPO_PUBLIC_SUPABASE_URL}",
+      "supabaseAnonKey": "${EXPO_PUBLIC_SUPABASE_ANON_KEY}",
+      "openweatherApiKey": "${EXPO_PUBLIC_OPENWEATHER_API_KEY}",
+      "wechatAppId": "${EXPO_PUBLIC_WECHAT_APP_ID}"
+    },
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FAFAF9"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yidayi.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "衣搭衣需要相机权限来拍摄衣物照片。",
+        "NSPhotoLibraryUsageDescription": "衣搭衣需要相册权限来上传衣物图片。"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FAFAF9"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.yidayi.app",
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE"]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "允许衣搭衣使用您的相机。"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "允许衣搭衣访问您的相册。"
+        }
+      ]
+    ]
+  }
+}

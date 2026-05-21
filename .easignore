@@ -1,0 +1,11 @@
+# EAS Build ignore - exclude files not needed in the build
+node_modules/
+.git/
+.claude/
+AGENTS.md
+CLAUDE.md
+README.md
+supabase/
+eas.json
+.easignore
+.expo/
