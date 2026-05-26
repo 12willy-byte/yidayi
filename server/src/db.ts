@@ -38,10 +38,18 @@ function getTursoDb(): Client {
   return _tursoDb;
 }
 
+let _dbInstance: Client | null = null;
+
+function getDb(): Client {
+  if (isSupabaseMode) return null as unknown as Client;
+  if (!_dbInstance) _dbInstance = getTursoDb();
+  return _dbInstance;
+}
+
 /** @deprecated Use `query()` instead. Exported only for index.ts file-serving endpoint. */
-export const db: Client = isSupabaseMode
-  ? (null as unknown as Client)
-  : getTursoDb();
+export const db: Client = new Proxy({} as Client, {
+  get(_target, prop) { return (getDb() as any)[prop]; },
+});
 
 // ---------------------------------------------------------------------------
 // Unified query() — Works with BOTH backends
