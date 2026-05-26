@@ -84,6 +84,24 @@ app.get("/admin", (_req, res) => {
   });
 });
 
+app.get("/", (_req, res) => {
+  res.json({
+    name: "衣搭衣 API",
+    version: "1.2.0",
+    docs: "https://yidayi-api.netlify.app/api/health",
+    endpoints: {
+      health: "GET /api/health",
+      auth: "/api/auth/*",
+      profile: "/api/profile/*",
+      clothing: "/api/clothing/*",
+      outfits: "/api/outfits/*",
+      diary: "/api/diary/*",
+      ai: "/api/ai/*",
+      upload: "/api/upload/*",
+    },
+  });
+});
+
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
