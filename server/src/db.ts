@@ -46,10 +46,10 @@ function getDb(): Client {
   return _dbInstance;
 }
 
-/** @deprecated Use `query()` instead. Exported only for index.ts file-serving endpoint. */
-export const db: Client = new Proxy({} as Client, {
-  get(_target, prop) { return (getDb() as any)[prop]; },
-});
+/** @deprecated Use `query()` instead. Retained for backward compat only. */
+export const db: Client = isSupabaseMode
+  ? (null as unknown as Client)
+  : getTursoDb();
 
 // ---------------------------------------------------------------------------
 // Unified query() — Works with BOTH backends
