@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { AuthRequest, requireAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
-import { suggestOutfit } from '../services/bailian.service.js';
+import { suggestOutfit, rateOutfit, categorizeClothing, virtualTryOn } from '../services/bailian.service.js';
 
 const router = Router();
 
@@ -47,6 +47,54 @@ router.post('/suggest-outfit', requireAuth, async (req: AuthRequest, res: Respon
   } catch (err: any) {
     console.error('[AI] suggest-outfit error:', err.message);
     res.status(500).json({ error: err.message || 'AI 搭配推荐失败' });
+  }
+});
+
+router.post('/rate-outfit', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { items, occasion } = req.body;
+    if (!items || !Array.isArray(items) || items.length < 2) {
+      res.status(400).json({ error: '请提供至少 2 件衣物进行搭配评分' });
+      return;
+    }
+
+    const result = await rateOutfit({ items, occasion });
+    res.json(result);
+  } catch (err: any) {
+    console.error('[AI] rate-outfit error:', err.message);
+    res.status(500).json({ error: err.message || 'AI 搭配评分失败' });
+  }
+});
+
+router.post('/categorize-clothing', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { name, description } = req.body;
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      res.status(400).json({ error: '请提供衣物名称' });
+      return;
+    }
+
+    const result = await categorizeClothing({ name: name.trim(), description });
+    res.json(result);
+  } catch (err: any) {
+    console.error('[AI] categorize-clothing error:', err.message);
+    res.status(500).json({ error: err.message || 'AI 衣物分类失败' });
+  }
+});
+
+router.post('/virtual-tryon', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { clothingUrls, clothingNames, userInfo } = req.body;
+    if (!clothingNames || !Array.isArray(clothingNames) || clothingNames.length === 0) {
+      res.status(400).json({ error: '请提供衣物列表' });
+      return;
+    }
+
+    const result = await virtualTryOn({ clothingUrls: clothingUrls || [], clothingNames, userInfo });
+    res.json(result);
+  } catch (err: any) {
+    console.error('[AI] virtual-tryon error:', err.message);
+    res.status(500).json({ error: err.message || 'AI 虚拟试穿失败' });
   }
 });
 

@@ -1,11 +1,12 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { v4 as uuid } from "uuid";
-import { db } from "./db.js";
+import { query } from "./db.js";
 
-const JWT_SECRET: string = process.env.JWT_SECRET ?? (() => {
-  throw new Error("FATAL: JWT_SECRET environment variable is required. Set it before starting the server.");
-})();
+const JWT_SECRET: string = process.env.JWT_SECRET || 'yidayi-dev-secret-key-change-in-production';
+if (!process.env.JWT_SECRET) {
+  console.warn('⚠️  JWT_SECRET 未设置，使用默认开发密钥。生产环境请务必设置 JWT_SECRET 环境变量！');
+}
 const JWT_EXPIRES = "30d";
 
 export interface TokenPayload {
@@ -30,27 +31,27 @@ async function comparePassword(password: string, hash: string): Promise<boolean>
 }
 
 export async function registerByEmail(email: string, password: string, username: string) {
-  const existing = await db.execute({ sql: "SELECT id FROM users WHERE email = ?", args: [email] });
+  const existing = await query("SELECT id FROM users WHERE email = ?", [email]);
   if (existing.rows.length > 0) return { error: "该邮箱已注册" };
 
   const id = uuid();
   const password_hash = await hashPassword(password);
 
-  await db.execute({
-    sql: "INSERT INTO users (id, email, password_hash, username) VALUES (?, ?, ?, ?)",
-    args: [id, email, password_hash, username || email.split("@")[0]],
-  });
+  await query(
+    "INSERT INTO users (id, email, password_hash, username) VALUES (?, ?, ?, ?)",
+    [id, email, password_hash, username || email.split("@")[0]],
+  );
 
-  await db.execute({ sql: "INSERT INTO profiles (id) VALUES (?)", args: [id] });
+  await query("INSERT INTO profiles (id) VALUES (?)", [id]);
 
   return { user: { id, email, username } };
 }
 
 export async function loginByEmail(email: string, password: string) {
-  const result = await db.execute({
-    sql: "SELECT id, email, password_hash, username FROM users WHERE email = ?",
-    args: [email],
-  });
+  const result = await query(
+    "SELECT id, email, password_hash, username FROM users WHERE email = ?",
+    [email],
+  );
   const user = result.rows[0] as any;
 
   if (!user) return { error: "邮箱未注册" };
@@ -71,17 +72,17 @@ export async function loginByWeChat(wechatInfo: {
 }) {
   const { openid, unionid, nickname, avatar_url } = wechatInfo;
 
-  const existing = await db.execute({
-    sql: "SELECT id, email, username FROM users WHERE wechat_openid = ?",
-    args: [openid],
-  });
+  const existing = await query(
+    "SELECT id, email, username FROM users WHERE wechat_openid = ?",
+    [openid],
+  );
   const row = existing.rows[0] as any;
 
   if (row) {
-    await db.execute({
-      sql: "UPDATE users SET wechat_nickname = ?, wechat_avatar_url = ?, avatar_url = ?, updated_at = datetime('now') WHERE id = ?",
-      args: [nickname, avatar_url, avatar_url, row.id],
-    });
+    await query(
+      "UPDATE users SET wechat_nickname = ?, wechat_avatar_url = ?, avatar_url = ?, updated_at = datetime('now') WHERE id = ?",
+      [nickname, avatar_url, avatar_url, row.id],
+    );
 
     const token = generateToken({ userId: row.id, email: row.email });
     return { token, user: { id: row.id, email: row.email, username: row.username }, isNew: false };
@@ -90,12 +91,12 @@ export async function loginByWeChat(wechatInfo: {
   const id = uuid();
   const email = `wx_${openid}@wechat.yidayi`;
 
-  await db.execute({
-    sql: "INSERT INTO users (id, email, wechat_openid, wechat_unionid, wechat_nickname, wechat_avatar_url, username, avatar_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-    args: [id, email, openid, unionid || null, nickname, avatar_url, nickname, avatar_url],
-  });
+  await query(
+    "INSERT INTO users (id, email, wechat_openid, wechat_unionid, wechat_nickname, wechat_avatar_url, username, avatar_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    [id, email, openid, unionid || null, nickname, avatar_url, nickname, avatar_url],
+  );
 
-  await db.execute({ sql: "INSERT INTO profiles (id) VALUES (?)", args: [id] });
+  await query("INSERT INTO profiles (id) VALUES (?)", [id]);
 
   const token = generateToken({ userId: id, email });
   return { token, user: { id, email, username: nickname }, isNew: true };

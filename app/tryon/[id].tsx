@@ -80,15 +80,35 @@ export default function VirtualTryOn() {
         userPhotoUrl = uploadData?.url || null;
       }
 
-      // Virtual try-on requires an AI backend — show a mock result for now
-      const mockSession: any = {
+      // Call AI virtual try-on for outfit description + fit analysis
+      const clothingUrls = ((outfit as any)?.items || [])
+        .map((oi: any) => oi.removed_bg_url || oi.image_url)
+        .filter(Boolean) as string[];
+      const clothingNames = ((outfit as any)?.items || [])
+        .map((oi: any) => oi.name)
+        .filter(Boolean) as string[];
+
+      const { data, error } = await api.ai.virtualTryOn({
+        clothingUrls,
+        clothingNames,
+        userInfo: modelType === "user" ? {
+          photoUrl: userPhotoUrl || undefined,
+        } : undefined,
+      });
+
+      if (error) throw new Error(error);
+
+      const aiResult: any = {
         id: "tryon_" + Date.now(),
         outfit_id: id,
         model_type: modelType,
-        result_url: userPhotoUrl || (outfit as any)?.items?.[0]?.removed_bg_url || (outfit as any)?.items?.[0]?.image_url,
+        outfitDescription: data?.outfitDescription || "",
+        fitAnalysis: data?.fitAnalysis || "",
+        styleAdvice: data?.styleAdvice || "",
+        result_url: userPhotoUrl || clothingUrls[0] || null,
         created_at: new Date().toISOString(),
       };
-      setSession(mockSession);
+      setSession(aiResult);
     } catch (err: any) {
       Alert.alert("试穿失败", err.message || "请稍后重试");
     } finally {
@@ -100,8 +120,8 @@ export default function VirtualTryOn() {
     setFeedback(rating);
   };
 
-  // Show result
-  if (session?.result_url) {
+  // Show AI result
+  if (session) {
     return (
       <View className="flex-1 bg-ivory-200">
         <View className="pt-14 px-5 flex-row items-center justify-between mb-6">
@@ -112,17 +132,44 @@ export default function VirtualTryOn() {
           <View className="w-6" />
         </View>
 
-        <ScrollView className="flex-1 px-5" contentContainerStyle={{ alignItems: "center" }}>
-          <Image
-            source={{ uri: session.result_url }}
-            style={{ width: 320, height: 427, borderRadius: 24 }}
-            contentFit="cover"
-            transition={500}
-          />
+        <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
+          {/* Image preview */}
+          {session.result_url && (
+            <Image
+              source={{ uri: session.result_url }}
+              style={{ width: "100%", aspectRatio: 3 / 4, borderRadius: 24, alignSelf: "center", maxWidth: 320 }}
+              contentFit="cover"
+              transition={500}
+            />
+          )}
+
+          {/* AI outfit description */}
+          {session.outfitDescription && (
+            <View className="bg-white rounded-2xl p-5 mt-4 border border-charcoal-100">
+              <Text className="text-sm font-semibold text-gold-600 mb-2">搭配效果</Text>
+              <Text className="text-charcoal-700 leading-6">{session.outfitDescription}</Text>
+            </View>
+          )}
+
+          {/* AI fit analysis */}
+          {session.fitAnalysis && (
+            <View className="bg-white rounded-2xl p-5 mt-3 border border-charcoal-100">
+              <Text className="text-sm font-semibold text-gold-600 mb-2">合身度分析</Text>
+              <Text className="text-charcoal-700 leading-6">{session.fitAnalysis}</Text>
+            </View>
+          )}
+
+          {/* AI style advice */}
+          {session.styleAdvice && (
+            <View className="bg-white rounded-2xl p-5 mt-3 border border-charcoal-100">
+              <Text className="text-sm font-semibold text-gold-600 mb-2">风格建议</Text>
+              <Text className="text-charcoal-700 leading-6">{session.styleAdvice}</Text>
+            </View>
+          )}
 
           {/* Feedback */}
           <View className="mt-6 items-center">
-            <Text className="text-charcoal-600 mb-3">这个搭配效果如何？</Text>
+            <Text className="text-charcoal-600 mb-3">这个试穿效果如何？</Text>
             <View className="flex-row space-x-2">
               {[1, 2, 3, 4, 5].map((star) => (
                 <TouchableOpacity

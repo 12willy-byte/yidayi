@@ -1,0 +1,44 @@
+name: Build APK — EAS 构建 Android 安装包
+
+on:
+  workflow_dispatch:  # 手动触发
+    inputs:
+      profile:
+        description: '构建 profile'
+        required: true
+        type: choice
+        options:
+          - preview
+          - production
+        default: 'preview'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Build APK
+        run: |
+          eas build --platform android \
+            --profile ${{ github.event.inputs.profile }} \
+            --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: yidayi-apk
+          path: '*.apk'

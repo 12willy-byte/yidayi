@@ -2,6 +2,12 @@ import { Router, Response } from "express";
 import { registerByEmail, loginByEmail, loginByWeChat } from "../auth.js";
 import { AuthRequest, requireAuth } from "../middleware/auth.js";
 import { query } from "../db.js";
+import {
+  isSupabaseMode,
+  supabaseSignUp,
+  supabaseSignIn,
+  supabaseWeChatLogin,
+} from "../supabase.js";
 
 const router = Router();
 
@@ -11,6 +17,15 @@ router.post("/register", async (req: AuthRequest, res: Response) => {
     if (!email || !password) { res.status(400).json({ error: "邮箱和密码不能为空" }); return; }
     if (password.length < 6) { res.status(400).json({ error: "密码至少6位" }); return; }
 
+    if (isSupabaseMode) {
+      // Supabase Auth: delegates to Supabase's built-in auth system
+      const result = await supabaseSignUp(email, password, username);
+      if ("error" in result) { res.status(400).json({ error: result.error }); return; }
+      res.json(result);
+      return;
+    }
+
+    // Turso mode: manual JWT + bcrypt
     const result = await registerByEmail(email, password, username);
     if ("error" in result) { res.status(400).json({ error: result.error }); return; }
 
@@ -28,6 +43,15 @@ router.post("/login", async (req: AuthRequest, res: Response) => {
     const { email, password } = req.body;
     if (!email || !password) { res.status(400).json({ error: "邮箱和密码不能为空" }); return; }
 
+    if (isSupabaseMode) {
+      // Supabase Auth: delegates to Supabase's built-in auth system
+      const result = await supabaseSignIn(email, password);
+      if ("error" in result) { res.status(400).json({ error: result.error }); return; }
+      res.json(result);
+      return;
+    }
+
+    // Turso mode: manual JWT + bcrypt
     const result = await loginByEmail(email, password);
     if ("error" in result) { res.status(400).json({ error: result.error }); return; }
 
@@ -65,11 +89,23 @@ router.post("/wechat", async (req: AuthRequest, res: Response) => {
       res.status(400).json({ error: (userData as any).errmsg || "获取微信用户信息失败" }); return;
     }
 
-    const result = await loginByWeChat({
-      openid, unionid,
+    const wechatInfo = {
+      openid,
+      unionid,
       nickname: (userData as any).nickname,
       avatar_url: (userData as any).headimgurl,
-    });
+    };
+
+    if (isSupabaseMode) {
+      // Supabase mode: create/get user via Supabase Admin API, return Supabase JWT
+      const result = await supabaseWeChatLogin(wechatInfo);
+      if ("error" in result) { res.status(400).json({ error: result.error }); return; }
+      res.json(result);
+      return;
+    }
+
+    // Turso mode: manual JWT + manual users table
+    const result = await loginByWeChat(wechatInfo);
 
     res.json(result);
   } catch (err: any) {
@@ -96,7 +132,9 @@ router.get("/me", requireAuth, async (req: AuthRequest, res: Response) => {
         height: profile.height,
         weight: profile.weight,
         body_type: profile.body_type,
-        style_tags: JSON.parse((profile.style_tags as string) || "[]"),
+        style_tags: typeof profile.style_tags === "string"
+          ? JSON.parse(profile.style_tags || "[]")
+          : (profile.style_tags || []),
         is_public: !!profile.is_public,
       } : null,
     },

@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>衣搭衣 - 管理后台</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <style>
+    :root {
+      --primary: #8b5cf6;
+      --primary-hover: #7c3aed;
+    }
+    /* Admin header bar */
+    .admin-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--pico-muted-border-color);
+      margin-bottom: 1.5rem;
+    }
+    .admin-header h2 { margin: 0; font-size: 1.25rem; }
+    .admin-header nav { display: flex; gap: 0.5rem; align-items: center; }
+
+    /* Stat cards grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: var(--pico-card-background-color);
+      border: 1px solid var(--pico-muted-border-color);
+      border-radius: var(--pico-border-radius);
+      padding: 1.25rem;
+      text-align: center;
+    }
+    .stat-card .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 0.25rem;
+    }
+    .stat-card .stat-label {
+      font-size: 0.875rem;
+      color: var(--pico-muted-color);
+    }
+
+    /* Activity list */
+    .activity-list article {
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.5rem;
+    }
+    .activity-list .activity-type {
+      display: inline-block;
+      font-size: 0.75rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      margin-right: 0.5rem;
+    }
+    .type-user_registered { background: #dbeafe; color: #1e40af; }
+    .type-clothing_added { background: #dcfce7; color: #166534; }
+    .type-outfit_created { background: #fef3c7; color: #92400e; }
+    .type-diary_recorded { background: #f3e8ff; color: #6b21a8; }
+
+    /* Users table */
+    .user-table-container { overflow-x: auto; }
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1.5rem;
+    }
+    .pagination button { width: auto; padding: 0.4rem 0.8rem; }
+
+    /* Login page */
+    .login-container {
+      max-width: 400px;
+      margin: 10vh auto;
+      text-align: center;
+    }
+    .login-container .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 2rem;
+    }
+
+    /* Page visibility */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* Search bar */
+    .search-bar {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .search-bar input { flex: 1; }
+
+    /* Two-column layout */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    @media (max-width: 768px) {
+      .two-col { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* Category tags */
+    .cat-tag {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: var(--pico-border-radius);
+      font-size: 0.8rem;
+      background: var(--pico-secondary-background);
+      margin: 0.15rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+
+    <!-- ====== LOGIN PAGE ====== -->
+    <div id="page-login" class="page active">
+      <div class="login-container">
+        <div class="logo">衣搭衣 · 管理后台</div>
+        <article>
+          <form id="login-form">
+            <label for="admin-key">Admin Key</label>
+            <input type="password" id="admin-key" placeholder="请输入管理员密钥" autofocus required>
+            <small id="login-error" style="color: var(--pico-del-color); display: none;"></small>
+            <button type="submit" style="width: 100%; margin-top: 1rem;">登录</button>
+          </form>
+        </article>
+      </div>
+    </div>
+
+    <!-- ====== APP PAGES ====== -->
+    <div id="page-app" class="page">
+
+      <!-- Header -->
+      <div class="admin-header">
+        <h2>衣搭衣 · 管理后台</h2>
+        <nav>
+          <button id="nav-dashboard" class="outline">仪表盘</button>
+          <button id="nav-users" class="outline">用户管理</button>
+          <button id="btn-logout" class="outline contrast" style="--pico-color: var(--pico-del-color);">退出</button>
+        </nav>
+      </div>
+
+      <!-- ====== DASHBOARD PAGE ====== -->
+      <div id="tab-dashboard" class="page active">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="stat-users">-</div>
+            <div class="stat-label">用户总数</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-clothing">-</div>
+            <div class="stat-label">衣物总数</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-outfits">-</div>
+            <div class="stat-label">搭配总数</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-diary">-</div>
+            <div class="stat-label">日记总数</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <!-- Category distribution -->
+          <article>
+            <h5>衣物类别分布</h5>
+            <div id="categories-container" style="margin-top: 0.5rem;">
+              <small style="color: var(--pico-muted-color);">加载中...</small>
+            </div>
+          </article>
+          <!-- Recent 7 days -->
+          <article>
+            <h5>近况概要</h5>
+            <div style="margin-top: 0.5rem;">
+              <p style="margin-bottom: 0.25rem;">最近7天新注册: <strong id="stat-recent">-</strong> 人</p>
+            </div>
+          </article>
+        </div>
+
+        <!-- Activity feed -->
+        <article>
+          <h5>最近活动</h5>
+          <div class="activity-list" id="activity-feed">
+            <small style="color: var(--pico-muted-color);">加载中...</small>
+          </div>
+        </article>
+      </div>
+
+      <!-- ====== USERS PAGE ====== -->
+      <div id="tab-users" class="page">
+        <div class="search-bar">
+          <input type="search" id="user-search" placeholder="搜索邮箱 / 用户名...">
+          <button id="btn-search">搜索</button>
+        </div>
+        <div class="user-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>用户名</th>
+                <th>邮箱</th>
+                <th>微信号</th>
+                <th>注册时间</th>
+              </tr>
+            </thead>
+            <tbody id="users-table-body">
+              <tr><td colspan="4" style="text-align:center; color: var(--pico-muted-color);">加载中...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination" id="users-pagination"></div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script>
+    // ============================================================
+    // Configuration
+    // ============================================================
+    const API_BASE = (() => {
+      // Use document-level data attribute for custom base, or auto-detect
+      const ds = document.currentScript?.dataset?.apiBase;
+      if (ds) return ds;
+      // Default: same origin (works when served from Express or same domain)
+      return window.location.origin;
+    })();
+
+    const ADMIN_KEY_STORE = 'yidayi_admin_key';
+
+    // ============================================================
+    // Helpers
+    // ============================================================
+    function getAdminKey() {
+      return localStorage.getItem(ADMIN_KEY_STORE);
+    }
+
+    async function apiFetch(path, options = {}) {
+      const key = getAdminKey();
+      const headers = {
+        'Content-Type': 'application/json',
+        'X-Admin-Key': key || '',
+        ...(options.headers || {}),
+      };
+      const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || `请求失败 (${res.status})`);
+      }
+      return json;
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      const d = new Date(dateStr + (dateStr.endsWith('Z') ? '' : 'Z'));
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleString('zh-CN', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit',
+      });
+    }
+
+    function formatRelTime(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr + (dateStr.endsWith('Z') ? '' : 'Z'));
+      if (isNaN(d.getTime())) return '';
+      const diff = Date.now() - d.getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return '刚刚';
+      if (mins < 60) return `${mins} 分钟前`;
+      const hours = Math.floor(mins / 60);
+      if (hours < 24) return `${hours} 小时前`;
+      const days = Math.floor(hours / 24);
+      if (days < 30) return `${days} 天前`;
+      return formatDate(dateStr);
+    }
+
+    const ACTIVITY_LABELS = {
+      user_registered: '用户注册',
+      clothing_added: '添加衣物',
+      outfit_created: '创建搭配',
+      diary_recorded: '记录日记',
+    };
+
+    // ============================================================
+    // Page navigation
+    // ============================================================
+    function showPage(pageId) {
+      document.querySelectorAll('#page-login, #page-app').forEach(p => p.classList.remove('active'));
+      document.getElementById(pageId).classList.add('active');
+    }
+
+    function showTab(tabId) {
+      document.querySelectorAll('#tab-dashboard, #tab-users').forEach(p => p.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+    }
+
+    // ============================================================
+    // Login
+    // ============================================================
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const key = document.getElementById('admin-key').value.trim();
+      const errEl = document.getElementById('login-error');
+      errEl.style.display = 'none';
+
+      if (!key) {
+        errEl.textContent = '请输入管理员密钥';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      try {
+        // Validate by calling stats endpoint
+        const resp = await fetch(`${API_BASE}/api/admin/stats`, {
+          headers: { 'X-Admin-Key': key },
+        });
+        if (!resp.ok) {
+          const json = await resp.json().catch(() => ({}));
+          throw new Error(json.error || '密钥无效');
+        }
+        localStorage.setItem(ADMIN_KEY_STORE, key);
+        showPage('page-app');
+        loadDashboard();
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.style.display = 'block';
+      }
+    });
+
+    // ============================================================
+    // Logout
+    // ============================================================
+    document.getElementById('btn-logout').addEventListener('click', () => {
+      localStorage.removeItem(ADMIN_KEY_STORE);
+      document.getElementById('admin-key').value = '';
+      showPage('page-login');
+    });
+
+    // ============================================================
+    // Navigation
+    // ============================================================
+    document.getElementById('nav-dashboard').addEventListener('click', () => {
+      showTab('tab-dashboard');
+      loadDashboard();
+    });
+
+    document.getElementById('nav-users').addEventListener('click', () => {
+      showTab('tab-users');
+      loadUsers();
+    });
+
+    // ============================================================
+    // Dashboard
+    // ============================================================
+    async function loadDashboard() {
+      try {
+        const [stats, activity] = await Promise.all([
+          apiFetch('/api/admin/stats'),
+          apiFetch('/api/admin/activity?limit=20'),
+        ]);
+        renderStats(stats);
+        renderActivity(activity.activity);
+      } catch (err) {
+        alert('加载仪表盘失败: ' + err.message);
+      }
+    }
+
+    function renderStats(stats) {
+      document.getElementById('stat-users').textContent = stats.totalUsers ?? '-';
+      document.getElementById('stat-clothing').textContent = stats.totalClothing ?? '-';
+      document.getElementById('stat-outfits').textContent = stats.totalOutfits ?? '-';
+      document.getElementById('stat-diary').textContent = stats.totalDiaryEntries ?? '-';
+      document.getElementById('stat-recent').textContent = stats.recentUsers ?? '-';
+
+      const cats = document.getElementById('categories-container');
+      if (stats.topCategories && stats.topCategories.length > 0) {
+        cats.innerHTML = stats.topCategories.map(c =>
+          `<span class="cat-tag">${escapeHtml(c.category)}: ${c.count}</span>`
+        ).join('');
+      } else {
+        cats.innerHTML = '<small style="color: var(--pico-muted-color);">暂无数据</small>';
+      }
+    }
+
+    function renderActivity(activity) {
+      const feed = document.getElementById('activity-feed');
+      if (!activity || activity.length === 0) {
+        feed.innerHTML = '<small style="color: var(--pico-muted-color);">暂无活动记录</small>';
+        return;
+      }
+      feed.innerHTML = activity.map(a => `
+        <article style="margin-bottom: 0.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span>
+              <span class="activity-type type-${a.type}">${ACTIVITY_LABELS[a.type] || a.type}</span>
+              <strong>${escapeHtml(a.title || '-')}</strong>
+            </span>
+            <small style="color: var(--pico-muted-color);">${formatRelTime(a.created_at)}</small>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    // ============================================================
+    // Users management
+    // ============================================================
+    let usersPage = 1;
+    let usersSearch = '';
+
+    async function loadUsers(page = 1) {
+      usersPage = page;
+      try {
+        const params = new URLSearchParams();
+        params.set('page', String(page));
+        params.set('limit', '20');
+        if (usersSearch) params.set('search', usersSearch);
+
+        const data = await apiFetch(`/api/admin/users?${params.toString()}`);
+        renderUsersTable(data.users);
+        renderPagination(data);
+      } catch (err) {
+        alert('加载用户列表失败: ' + err.message);
+      }
+    }
+
+    function renderUsersTable(users) {
+      const tbody = document.getElementById('users-table-body');
+      if (!users || users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color: var(--pico-muted-color);">暂无用户</td></tr>';
+        return;
+      }
+      tbody.innerHTML = users.map(u => `
+        <tr>
+          <td>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              ${u.avatar_url || u.wechat_avatar_url
+                ? `<img src="${escapeHtml(u.avatar_url || u.wechat_avatar_url)}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" alt="">`
+                : '<div style="width: 32px; height: 32px; border-radius: 50%; background: var(--pico-secondary-background); display: flex; align-items: center; justify-content: center; font-size: 0.8rem;">?</div>'
+              }
+              <span>${escapeHtml(u.username || u.wechat_nickname || '未设置')}</span>
+            </div>
+          </td>
+          <td>${escapeHtml(u.email || '-')}</td>
+          <td>${escapeHtml(u.wechat_nickname || '-')}</td>
+          <td>${formatDate(u.created_at)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderPagination(data) {
+      const pag = document.getElementById('users-pagination');
+      if (data.totalPages <= 1) {
+        pag.innerHTML = '';
+        return;
+      }
+      let html = '';
+      html += `<button class="outline" ${data.page <= 1 ? 'disabled' : ''} onclick="loadUsers(${data.page - 1})">上一页</button>`;
+      html += `<small>第 ${data.page} / ${data.totalPages} 页 (共 ${data.total} 条)</small>`;
+      html += `<button class="outline" ${data.page >= data.totalPages ? 'disabled' : ''} onclick="loadUsers(${data.page + 1})">下一页</button>`;
+      pag.innerHTML = html;
+    }
+
+    document.getElementById('btn-search').addEventListener('click', () => {
+      usersSearch = document.getElementById('user-search').value.trim();
+      loadUsers(1);
+    });
+
+    document.getElementById('user-search').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        usersSearch = e.target.value.trim();
+        loadUsers(1);
+      }
+    });
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // ============================================================
+    // Init
+    // ============================================================
+    (function init() {
+      const savedKey = getAdminKey();
+      if (savedKey) {
+        // Verify saved key is still valid
+        fetch(`${API_BASE}/api/admin/stats`, {
+          headers: { 'X-Admin-Key': savedKey },
+        }).then(resp => {
+          if (resp.ok) {
+            showPage('page-app');
+            loadDashboard();
+          } else {
+            localStorage.removeItem(ADMIN_KEY_STORE);
+            showPage('page-login');
+          }
+        }).catch(() => {
+          // Server might be down; show login anyway
+          showPage('page-login');
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
