@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from "express";
 import cors from "cors";
+import path from "path";
 import { initDB } from "./db.js";
 import authRoutes from "./routes/auth.js";
 import profileRoutes from "./routes/profile.js";
@@ -9,7 +10,11 @@ import outfitsRoutes from "./routes/outfits.js";
 import diaryRoutes from "./routes/diary.js";
 import aiRoutes from "./routes/ai.js";
 import uploadRoutes from "./routes/upload.js";
-import { db } from "./db.js";
+import adminRoutes from "./routes/admin.js";
+import feedbackRoutes from "./routes/feedback.js";
+import analyticsRoutes from "./routes/analytics.js";
+import pushRoutes from "./routes/push.js";
+import { query } from "./db.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
@@ -39,14 +44,18 @@ app.use("/api/outfits", outfitsRoutes);
 app.use("/api/diary", diaryRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/feedback", feedbackRoutes);
+app.use("/api/analytics", analyticsRoutes);
+app.use("/api/push", pushRoutes);
 
-// Serve uploaded files from Turso
+// Serve uploaded files (works with both Turso and Supabase via query())
 app.get("/api/file/:id", async (req, res) => {
   try {
-    const result = await db.execute({
-      sql: "SELECT filename, data FROM files WHERE id = ?",
-      args: [req.params.id],
-    });
+    const result = await query(
+      "SELECT filename, data FROM files WHERE id = ?",
+      [req.params.id],
+    );
     const row = result.rows[0] as any;
     if (!row) { res.status(404).json({ error: "文件不存在" }); return; }
 
@@ -63,6 +72,16 @@ app.get("/api/file/:id", async (req, res) => {
   } catch {
     res.status(500).json({ error: "读取文件失败" });
   }
+});
+
+// Serve admin dashboard (dev convenience; in Netlify serverless, open admin/index.html directly)
+app.get("/admin", (_req, res) => {
+  const filePath = path.join(process.cwd(), "admin", "index.html");
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      res.status(404).send("管理后台未找到，请直接在浏览器中打开 admin/index.html");
+    }
+  });
 });
 
 app.get("/api/health", (_req, res) => {

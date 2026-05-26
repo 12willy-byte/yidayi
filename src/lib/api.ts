@@ -35,13 +35,17 @@ async function request(
   method: string,
   path: string,
   body?: any,
-  isFormData?: boolean
+  isFormData?: boolean,
+  adminKey?: string
 ): Promise<any> {
   try {
     const token = await getToken();
     const headers: Record<string, string> = {};
     if (!isFormData) {
       headers["Content-Type"] = "application/json";
+    }
+    if (adminKey) {
+      headers["X-Admin-Key"] = adminKey;
     }
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
@@ -128,5 +132,59 @@ export const api = {
       stylePreference?: string;
       itemIds?: string[];
     }) => request("POST", "/api/ai/suggest-outfit", params),
+    rateOutfit: (params: {
+      items: Array<{ name: string; category: string; color?: string; colors?: string[] }>;
+      occasion?: string;
+    }) => request("POST", "/api/ai/rate-outfit", params),
+    categorizeClothing: (params: {
+      name: string;
+      description?: string;
+    }) => request("POST", "/api/ai/categorize-clothing", params),
+    virtualTryOn: (params: {
+      clothingUrls: string[];
+      clothingNames: Array<{ name: string; category: string; colors?: string[] }>;
+      userInfo?: { gender?: string; height?: string; bodyType?: string };
+    }) => request("POST", "/api/ai/virtual-tryon", params),
+  },
+
+  admin: {
+    stats: (adminKey: string) =>
+      request("GET", "/api/admin/stats", undefined, false, adminKey),
+
+    users: (adminKey: string, params?: { page?: number; limit?: number; search?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.page) qs.set("page", String(params.page));
+      if (params?.limit) qs.set("limit", String(params.limit));
+      if (params?.search) qs.set("search", params.search);
+      return request("GET", "/api/admin/users?" + qs.toString(), undefined, false, adminKey);
+    },
+
+    activity: (adminKey: string, limit?: number) => {
+      const qs = limit ? `?limit=${limit}` : "";
+      return request("GET", "/api/admin/activity" + qs, undefined, false, adminKey);
+    },
+  },
+
+  feedback: {
+    submitNPS: (score: number, feedbackText?: string) =>
+      request("POST", "/api/feedback/nps", { score, feedback_text: feedbackText || null }),
+
+    npsStats: () => request("GET", "/api/feedback/nps/stats"),
+  },
+
+  analytics: {
+    trackEvent: (eventName: string, eventData?: Record<string, any>, userId?: string) =>
+      request("POST", "/api/analytics/event", {
+        event_name: eventName,
+        event_data: eventData || {},
+        user_id: userId || undefined,
+      }),
+
+    stats: () => request("GET", "/api/analytics/stats"),
+  },
+
+  push: {
+    registerToken: (token: string) =>
+      request("POST", "/api/push/register", { token }),
   },
 };

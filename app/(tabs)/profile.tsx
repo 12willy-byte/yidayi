@@ -302,6 +302,13 @@ export default function ProfileScreen() {
             <ChevronRight size={20} color="#B0B0AA" />
           </TouchableOpacity>
           <TouchableOpacity
+            onPress={() => router.push("/feedback")}
+            className="flex-row items-center justify-between px-5 py-4 border-b border-charcoal-100"
+          >
+            <Text className="text-charcoal-900">帮助与反馈</Text>
+            <ChevronRight size={20} color="#B0B0AA" />
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={() => router.push("/settings")}
             className="flex-row items-center justify-between px-5 py-4 border-b border-charcoal-100"
           >

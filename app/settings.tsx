@@ -125,13 +125,16 @@ export default function SettingsScreen() {
           关于
         </Text>
         <View className="bg-white rounded-2xl overflow-hidden mb-6 border border-charcoal-100">
-          <View className="flex-row items-center justify-between px-5 py-4 border-b border-charcoal-100">
+          <TouchableOpacity
+            onPress={() => router.push("/feedback")}
+            className="flex-row items-center justify-between px-5 py-4 border-b border-charcoal-100"
+          >
             <View className="flex-row items-center">
               <HelpCircle size={20} color="#8C8C84" />
               <Text className="ml-3 text-charcoal-900">帮助与反馈</Text>
             </View>
             <ChevronRight size={20} color="#B0B0AA" />
-          </View>
+          </TouchableOpacity>
           <View className="flex-row items-center justify-between px-5 py-4">
             <View className="flex-row items-center">
               <Info size={20} color="#8C8C84" />
